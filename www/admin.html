@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Panel Admin - Bolsa de Trabajo IPN</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <style>
+    iframe { width: 100%; height: 300px; border: 1px solid #ccc; margin-top: 10px; }
+    .user-box { border: 1px solid #ccc; padding: 10px; margin: 10px 0; background: #fff; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <h1>Panel de Administración</h1>
+
+  <section>
+    <h2>➕ Crear nueva vacante</h2>
+    <form id="vacante-form">
+      <label>Nombre de la vacante:</label>
+      <input type="text" id="vacante-nombre" required>
+      <label>Descripción:</label>
+      <input type="text" id="vacante-desc">
+      <button type="submit">Crear</button>
+    </form>
+    <p id="vacante-status"></p>
+  </section>
+  <hr>
+
+  <section>
+    <h2>📄 Egresados registrados</h2>
+
+    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+    <div>
+        <label for="vacanteFiltro"><strong>Filtrar por vacante:</strong></label><br>
+        <select id="vacanteFiltro" required>
+        <option value="">Seleccione una vacante</option>
+        </select>
+    </div>
+
+    <div>
+        <label for="buscador"><strong>Buscar por nombre:</strong></label><br>
+        <input type="text" id="buscador" placeholder="Ej. Juan Pérez">
+    </div>
+    </div>
+    <br>
+  </section>
+
+  <script>
+    const authHeaders = {
+      "Authorization": "Basic " + btoa("admin:1234") // Ajusta si cambiaste el user/pass
+    };
+
+    // Crear vacante
+    document.getElementById('vacante-form').addEventListener('submit', async e => {
+      e.preventDefault();
+      const nombre = document.getElementById('vacante-nombre').value;
+      const descripcion = document.getElementById('vacante-desc').value;
+
+      const res = await fetch('/api/admin/vacantes/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders
+        },
+        body: JSON.stringify({ nombre, descripcion })
+      });
+
+      const data = await res.json();
+      document.getElementById('vacante-status').textContent = data.message || 'Error al crear';
+    });
+
+    // Cargar usuarios
+    let todosLosUsuarios = [];
+
+async function cargarUsuarios() {
+  const res = await fetch('/api/admin/usuarios', { headers: authHeaders });
+  todosLosUsuarios = await res.json();
+  renderUsuarios(); // función separada
+}
+
+function renderUsuarios() {
+  const contenedor = document.getElementById('usuarios');
+  contenedor.innerHTML = '';
+
+  const filtroNombre = document.getElementById('buscador').value.toLowerCase();
+  const filtroVacante = document.getElementById('vacanteFiltro').value;
+
+  const filtrados = todosLosUsuarios.filter(u => {
+    const coincideNombre = u.nombre.toLowerCase().includes(filtroNombre);
+    const coincideVacante = filtroVacante ? u.vacante?._id === filtroVacante : false;
+    return coincideNombre && coincideVacante;
+  });
+
+  filtrados.forEach(user => {
+    const div = document.createElement('div');
+    div.className = 'user-box';
+    div.innerHTML = `
+      <input type="checkbox" data-cv="${user.cv}">
+      <button onclick="mostrarCV('${user.cv}')">👁 Ver CV</button>
+      <strong>${user.nombre}</strong> (${user.edad} años)<br>
+      Vacante: ${user.vacante?.nombre || 'N/A'}<br>
+    `;
+    contenedor.appendChild(div);
+  });
+}
+
+
+function mostrarCV(cvFilename) {
+  document.getElementById('preview-cv').src = `/cvs/${cvFilename}`;
+}
+
+
+    // Descargar seleccionados como zip
+    document.getElementById('descargarZip').addEventListener('click', async () => {
+      const checks = document.querySelectorAll('input[type="checkbox"]:checked');
+      const archivos = Array.from(checks).map(c => c.dataset.cv);
+
+      const res = await fetch('/api/admin/zip', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders
+        },
+        body: JSON.stringify({ archivos })
+      });
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'cvs_seleccionados.zip';
+      a.click();
+    });
+    
+    async function cargarVacantesEnFiltro() {
+    const res = await fetch('/api/vacantes');
+    const vacantes = await res.json();
+    const select = document.getElementById('vacanteFiltro');
+
+    vacantes.forEach(v => {
+        const option = document.createElement('option');
+        option.value = v._id;
+        option.textContent = v.nombre;
+        select.appendChild(option);
+    });
+    }
+
+    document.getElementById('vacanteFiltro').addEventListener('change', renderUsuarios);
+    document.getElementById('buscador').addEventListener('input', renderUsuarios);
+
+    cargarVacantesEnFiltro();
+    cargarUsuarios();
+
+
+  </script>
+</body>
+</html>
