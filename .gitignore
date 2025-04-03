@@ -1,0 +1,24 @@
+# Node modules
+node_modules/
+
+# Env files
+.env
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Uploaded CVs
+cvs/
+
+# Optional: editor/IDE configs
+.vscode/
+.idea/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Docker artifacts
+docker-compose.override.yml

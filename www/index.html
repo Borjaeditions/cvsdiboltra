@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Registro de CV</title>
+</head>
+<body>
+  <h1>Registro de Usuario</h1>
+  <form action="/api/users/create" method="POST" enctype="multipart/form-data">
+    <label>Nombre:</label><br>
+    <input type="text" name="nombre" required><br><br>
+
+    <label>Edad:</label><br>
+    <input type="number" name="edad" required><br><br>
+
+    <label>Vacante:</label><br>
+    <select name="vacante" id="vacante-select" required></select><br><br>
+
+    <label>Subir CV:</label><br>
+    <input type="file" name="cv" required><br><br>
+
+    <button type="submit">Enviar</button>
+  </form>
+  <script>
+    fetch('/api/vacantes')
+      .then(res => res.json())
+      .then(data => {
+        const select = document.getElementById('vacante-select');
+        data.forEach(v => {
+          const option = document.createElement('option');
+          option.value = v._id;
+          option.textContent = v.nombre;
+          select.appendChild(option);
+        });
+      });
+  </script>
+</body>
+</html>
