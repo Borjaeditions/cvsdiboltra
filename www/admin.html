@@ -17,7 +17,7 @@
       <h2>➕ Crear nueva vacante</h2>
       <form id="vacante-form">
         <label>Nombre de la vacante:</label>
-        <input type="text" id="vacante-nombre" required>
+        <input type="text" id="vacante-nombre">
         <label>Descripción:</label>
         <input type="text" id="vacante-desc">
         <button type="submit">Crear</button>
@@ -177,7 +177,7 @@
 
         const filtrados = todosLosUsuarios.filter(u => {
           const coincideNombre = u.nombre.toLowerCase().includes(filtroNombre);
-          const coincideVacante = filtroVacante ? u.vacante?._id === filtroVacante : false;
+          const coincideVacante = filtroVacante ? u.vacante?._id === filtroVacante : true;
           return coincideNombre && coincideVacante;
         });
 
