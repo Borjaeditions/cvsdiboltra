@@ -14,7 +14,7 @@ const PORT = process.env.PORT || 3000;
 // Middlewares
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use('/cvs', express.static(path.join(__dirname, 'cvs')));
+
 app.use(express.static(path.join(__dirname, 'www')));
 
 // Rutas

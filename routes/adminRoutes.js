@@ -34,8 +34,14 @@ router.post('/vacantes/create', auth, async (req, res) => {
 
 // ✅ Listar usuarios con vacante
 router.get('/usuarios', auth, async (req, res) => {
-  const users = await User.find().populate('vacante');
-  res.json(users);
+  try {
+    const users = await User.find().populate('vacante');
+    console.log(users);
+    res.json(users);
+  } catch (err) {
+    console.error("Error al obtener usuarios:", err);
+    res.status(500).json({ error: 'Error al obtener usuarios' });
+  }
 });
 
 // ✅ Descargar ZIP nombrado con identificador de la vacante
@@ -63,6 +69,17 @@ router.post('/zip', auth, async (req, res) => {
   });
 
   archive.finalize();
+});
+router.get('/cv/:filename', auth, (req, res) => {
+  const { filename } = req.params;
+  const filePath = path.join(__dirname, '..', 'cvs', filename);
+
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ error: 'Archivo no encontrado' });
+  }
+
+  res.setHeader('Content-Type', 'application/pdf');
+  res.sendFile(filePath);
 });
 
 module.exports = router;

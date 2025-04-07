@@ -1,175 +1,219 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <title>Panel Admin - Bolsa de Trabajo IPN</title>
-  <link rel="stylesheet" href="/css/styles.css">
-  <style>
-    iframe { width: 100%; height: 300px; border: 1px solid #ccc; margin-top: 10px; }
-    .user-box { border: 1px solid #ccc; padding: 10px; margin: 10px 0; background: #fff; border-radius: 6px; }
-    .acciones { margin-top: 20px; }
-  </style>
-</head>
-<body>
-  <h1>Panel de Administración</h1>
+  <!DOCTYPE html>
+  <html lang="es">
+  <head>
+    <meta charset="UTF-8">
+    <title>Panel Admin - Bolsa de Trabajo IPN</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <style>
+      iframe { width: 100%; height: 300px; border: 1px solid #ccc; margin-top: 10px; }
+      .user-box { border: 1px solid #ccc; padding: 10px; margin: 10px 0; background: #fff; border-radius: 6px; }
+      .acciones { margin-top: 20px; }
+    </style>
+  </head>
+  <body>
+    <h1>Panel de Administración</h1>
 
-  <section>
-    <h2>➕ Crear nueva vacante</h2>
-    <form id="vacante-form">
-      <label>Nombre de la vacante:</label>
-      <input type="text" id="vacante-nombre" required>
-      <label>Descripción:</label>
-      <input type="text" id="vacante-desc">
-      <button type="submit">Crear</button>
-    </form>
-    <p id="vacante-status"></p>
-  </section>
-  <hr>
+    <section>
+      <h2>➕ Crear nueva vacante</h2>
+      <form id="vacante-form">
+        <label>Nombre de la vacante:</label>
+        <input type="text" id="vacante-nombre" required>
+        <label>Descripción:</label>
+        <input type="text" id="vacante-desc">
+        <button type="submit">Crear</button>
+      </form>
+      <p id="vacante-status"></p>
+    </section>
+    <hr>
 
-  <section>
-    <h2>📄 Egresados registrados</h2>
+    <section>
+      <h2>📄 Egresados registrados</h2>
 
-    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-      <div>
-        <label for="vacanteFiltro"><strong>Filtrar por vacante:</strong></label><br>
-        <select id="vacanteFiltro" required>
-          <option value="">Seleccione una vacante</option>
-        </select>
+      <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+        <div>
+          <label for="vacanteFiltro"><strong>Filtrar por vacante:</strong></label><br>
+          <select id="vacanteFiltro" required>
+            <option value="">Seleccione una vacante</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="buscador"><strong>Buscar por nombre:</strong></label><br>
+          <input type="text" id="buscador" placeholder="Ej. Juan Pérez">
+        </div>
       </div>
 
-      <div>
-        <label for="buscador"><strong>Buscar por nombre:</strong></label><br>
-        <input type="text" id="buscador" placeholder="Ej. Juan Pérez">
+      <br>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 20px;">
+        <div id="usuarios" style="flex: 1; min-width: 300px;"></div>
+
+        <div style="flex: 2; min-width: 400px; padding-left: 20px;">
+          <h3>Vista previa del CV</h3>
+          <canvas id="preview-cv" style="width:100%; border:1px solid #ccc;"></canvas>
+        </div>
       </div>
-    </div>
 
-    <br>
-
-    <div style="display: flex; flex-wrap: wrap; gap: 20px;">
-      <div id="usuarios" style="flex: 1; min-width: 300px;"></div>
-
-      <div style="flex: 2; min-width: 400px; padding-left: 20px;">
-        <h3>Vista previa del CV</h3>
-        <iframe id="preview-cv" src=""></iframe>
+      <div class="acciones">
+        <button id="descargarZip">📦 Descargar seleccionados (.zip)</button>
       </div>
-    </div>
+    </section>
 
-    <div class="acciones">
-      <button id="descargarZip">📦 Descargar seleccionados (.zip)</button>
-    </div>
-  </section>
+    <script src="/pdfjs/pdf.js"></script>
+    <script>
+      if (typeof pdfjsLib !== 'undefined') {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdfjs/pdf.worker.js';
+      } else {
+        console.error('❌ pdfjsLib no está disponible. Verifica que /pdfjs/pdf.js se cargue correctamente.');
+      }
+    </script>
+    
+    <script>
+      const authHeaders = {
+        "Authorization": "Basic " + btoa("admin:1234") // Ajusta si cambiaste user/pass
+      };
 
-  <script>
-    const authHeaders = {
-      "Authorization": "Basic " + btoa("admin:1234") // Ajusta si cambiaste user/pass
-    };
+      const formVacante = document.getElementById('vacante-form');
+      if (formVacante) {
+        formVacante.addEventListener('submit', async e => {
+          e.preventDefault();
+          const nombre = document.getElementById('vacante-nombre').value;
+          const descripcion = document.getElementById('vacante-desc').value;
 
-    const formVacante = document.getElementById('vacante-form');
-    if (formVacante) {
-      formVacante.addEventListener('submit', async e => {
-        e.preventDefault();
-        const nombre = document.getElementById('vacante-nombre').value;
-        const descripcion = document.getElementById('vacante-desc').value;
+          const res = await fetch('/api/admin/vacantes/create', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...authHeaders
+            },
+            body: JSON.stringify({ nombre, descripcion })
+          });
 
-        const res = await fetch('/api/admin/vacantes/create', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...authHeaders
-          },
-          body: JSON.stringify({ nombre, descripcion })
+          const data = await res.json();
+          document.getElementById('vacante-status').textContent = data.message || 'Error al crear';
         });
+      }
 
+      // 🧠 Mostrar PDF seleccionado
+      function mostrarCV(cvFilename) {
+        const canvas = document.getElementById('preview-cv');
+        const ctx = canvas.getContext('2d');
+        const url = `/api/admin/cv/${cvFilename}`;
+
+        pdfjsLib.getDocument({
+          url,
+          httpHeaders: {
+            Authorization: "Basic " + btoa("admin:1234") // o tu token
+          }
+        }).promise.then(pdf => {
+          return pdf.getPage(1);
+        }).then(page => {
+          const viewport = page.getViewport({ scale: 1.5 });
+          canvas.height = viewport.height;
+          canvas.width = viewport.width;
+
+          return page.render({ canvasContext: ctx, viewport }).promise;
+        }).catch(err => {
+          console.error("❌ Error al cargar PDF:", err);
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          alert("No se pudo mostrar el CV.");
+        });
+      }
+
+      // 📦 Descargar ZIP
+      const btnDescarga = document.getElementById('descargarZip');
+      if (btnDescarga) {
+        btnDescarga.addEventListener('click', async () => {
+          const checks = document.querySelectorAll('input[type="checkbox"]:checked');
+          const archivos = Array.from(checks).map(c => c.dataset.cv);
+
+          if (!archivos.length) return alert("Selecciona al menos un CV");
+
+          const res = await fetch('/api/admin/zip', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...authHeaders
+            },
+            body: JSON.stringify({ archivos })
+          });
+
+          const blob = await res.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'cvs_seleccionados.zip';
+          a.click();
+        });
+      }
+
+      // 📋 Listar y filtrar usuarios
+      let todosLosUsuarios = [];
+
+      async function cargarUsuarios() {
+      try {
+        const res = await fetch('/api/admin/usuarios', { headers: authHeaders });
         const data = await res.json();
-        document.getElementById('vacante-status').textContent = data.message || 'Error al crear';
-      });
+        console.log("📦 Datos recibidos del backend:", data); // 🔍 log importante
+
+        if (!Array.isArray(data)) throw new Error("No se obtuvo un arreglo");
+
+        todosLosUsuarios = data;
+        renderUsuarios();
+      } catch (err) {
+        console.error("❌ Error cargando usuarios:", err);
+        todosLosUsuarios = [];
+        renderUsuarios();
+      }
     }
 
-    // 🧠 Mostrar PDF seleccionado
-    function mostrarCV(cvFilename) {
-      document.getElementById('preview-cv').src = `/cvs/${cvFilename}`;
-    }
+      function renderUsuarios() {
+        console.log("🎯 Renderizando usuarios:", todosLosUsuarios); // 🔍
+        const contenedor = document.getElementById('usuarios');
+        contenedor.innerHTML = '';
 
-    // 📦 Descargar ZIP
-    const btnDescarga = document.getElementById('descargarZip');
-    if (btnDescarga) {
-      btnDescarga.addEventListener('click', async () => {
-        const checks = document.querySelectorAll('input[type="checkbox"]:checked');
-        const archivos = Array.from(checks).map(c => c.dataset.cv);
+        const filtroNombre = document.getElementById('buscador').value.toLowerCase();
+        const filtroVacante = document.getElementById('vacanteFiltro').value;
 
-        if (!archivos.length) return alert("Selecciona al menos un CV");
-
-        const res = await fetch('/api/admin/zip', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...authHeaders
-          },
-          body: JSON.stringify({ archivos })
+        const filtrados = todosLosUsuarios.filter(u => {
+          const coincideNombre = u.nombre.toLowerCase().includes(filtroNombre);
+          const coincideVacante = filtroVacante ? u.vacante?._id === filtroVacante : false;
+          return coincideNombre && coincideVacante;
         });
 
-        const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'cvs_seleccionados.zip';
-        a.click();
-      });
-    }
+        filtrados.forEach(user => {
+          console.log("👤 Mostrando usuario:", user); // 🔍
 
-    // 📋 Listar y filtrar usuarios
-    let todosLosUsuarios = [];
+          const div = document.createElement('div');
+          div.className = 'user-box';
+          div.innerHTML = `
+            <input type="checkbox" data-cv="${user.cv}">
+            <button onclick="mostrarCV('${user.cv}')">👁 Ver CV</button>
+            <strong>${user.nombre}</strong> (${user.edad} años)<br>
+            Vacante: ${user.vacante?.identificador || 'N/A'} - ${user.vacante?.nombre || 'N/A'}<br>
+          `;
+          contenedor.appendChild(div);
+        });
+      }
 
-    async function cargarUsuarios() {
-      const res = await fetch('/api/admin/usuarios', { headers: authHeaders });
-      todosLosUsuarios = await res.json();
-      renderUsuarios();
-    }
+      async function cargarVacantesEnFiltro() {
+        const res = await fetch('/api/vacantes');
+        const vacantes = await res.json();
+        const select = document.getElementById('vacanteFiltro');
 
-    function renderUsuarios() {
-      const contenedor = document.getElementById('usuarios');
-      contenedor.innerHTML = '';
+        vacantes.forEach(v => {
+          const option = document.createElement('option');
+          option.value = v._id;
+          option.textContent = `${v.identificador} - ${v.nombre}`;
+          select.appendChild(option);
+        });
+      }
 
-      const filtroNombre = document.getElementById('buscador').value.toLowerCase();
-      const filtroVacante = document.getElementById('vacanteFiltro').value;
+      document.getElementById('vacanteFiltro').addEventListener('change', renderUsuarios);
+      document.getElementById('buscador').addEventListener('input', renderUsuarios);
 
-      const filtrados = todosLosUsuarios.filter(u => {
-        const coincideNombre = u.nombre.toLowerCase().includes(filtroNombre);
-        const coincideVacante = filtroVacante ? u.vacante?._id === filtroVacante : false;
-        return coincideNombre && coincideVacante;
-      });
-
-      filtrados.forEach(user => {
-        const div = document.createElement('div');
-        div.className = 'user-box';
-        div.innerHTML = `
-          <input type="checkbox" data-cv="${user.cv}">
-          <button onclick="mostrarCV('${user.cv}')">👁 Ver CV</button>
-          <strong>${user.nombre}</strong> (${user.edad} años)<br>
-          Vacante: ${user.vacante?.identificador || 'N/A'} - ${user.vacante?.nombre || 'N/A'}<br>
-        `;
-        contenedor.appendChild(div);
-      });
-    }
-
-    async function cargarVacantesEnFiltro() {
-      const res = await fetch('/api/vacantes');
-      const vacantes = await res.json();
-      const select = document.getElementById('vacanteFiltro');
-
-      vacantes.forEach(v => {
-        const option = document.createElement('option');
-        option.value = v._id;
-        option.textContent = `${v.identificador} - ${v.nombre}`;
-        select.appendChild(option);
-      });
-    }
-
-    document.getElementById('vacanteFiltro').addEventListener('change', renderUsuarios);
-    document.getElementById('buscador').addEventListener('input', renderUsuarios);
-
-    cargarVacantesEnFiltro();
-    cargarUsuarios();
-  </script>
-</body>
-</html>
+      cargarVacantesEnFiltro();
+      cargarUsuarios();
+    </script>
+  </body>
+  </html>
