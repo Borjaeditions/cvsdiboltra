@@ -9,28 +9,50 @@ const Vacante = require('../models/Vacante');
 
 // ✅ Crear vacante con identificador tipo VacanteIS1-25
 router.post('/vacantes/create', auth, async (req, res) => {
-  const { nombre, descripcion } = req.body;
+  try {
+    const { nombre, descripcion } = req.body;
 
-  // Obtener iniciales del nombre
-  const iniciales = nombre
-    .split(' ')
-    .map(p => p.charAt(0).toUpperCase())
-    .join('');
+    const palabrasIgnoradas = ['en', 'de', 'del', 'la', 'el', 'y'];
 
-  // Buscar cuántas ya existen con esas iniciales
-  const similares = await Vacante.find({ identificador: new RegExp(`^Vacante${iniciales}`) });
-  const consecutivo = similares.length + 1;
+    const siglas = nombre
+      .split(/\s+/)
+      .filter(p => !palabrasIgnoradas.includes(p.toLowerCase()))
+      .map(p => p[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2); // Solo dos letras
 
-  // Año actual (dos dígitos)
-  const año = new Date().getFullYear().toString().slice(-2);
+    const añoActual = new Date().getFullYear().toString().slice(-2);
 
-  const identificador = `Vacante${iniciales}${consecutivo}-${año}`;
+    // Trae todas las vacantes del año actual sin importar siglas
+    const todas = await Vacante.find({ identificador: { $regex: `-${añoActual}$` } });
 
-  const nuevaVacante = new Vacante({ nombre, descripcion, identificador });
-  await nuevaVacante.save();
+    const numerosUsados = todas.map(v => {
+      const match = v.identificador.match(/^Vacante[A-Z]{2}(\d+)-\d{2}$/);
+      console.log(match);
+      return match ? parseInt(match[1]) : 0;
+    });
+    
 
-  res.status(201).json({ message: 'Vacante creada', vacante: nuevaVacante });
+    const siguienteNumero = numerosUsados.length > 0 ? Math.max(...numerosUsados) + 1 : 1;
+    const identificador = `Vacante${siglas}${siguienteNumero}-${añoActual}`;
+
+    const nuevaVacante = new Vacante({
+      nombre,
+      descripcion,
+      identificador,
+      fechaCreacion: new Date()
+    });
+
+    await nuevaVacante.save();
+    res.json({ message: "Vacante creada con éxito", vacante: nuevaVacante });
+
+  } catch (err) {
+    console.error("❌ Error al crear vacante:", err);
+    res.status(500).json({ error: "Error al crear vacante" });
+  }
 });
+
 
 // ✅ Listar usuarios con vacante
 router.get('/usuarios', auth, async (req, res) => {

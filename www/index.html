@@ -7,33 +7,131 @@
 </head>
 <body>
   <h1>Registro de Usuario</h1>
-  <form action="/api/users/create" method="POST" enctype="multipart/form-data">
+
+  <form id="registro-form" enctype="multipart/form-data">
     <label>Nombre:</label><br>
     <input type="text" name="nombre" required><br><br>
 
     <label>Edad:</label><br>
     <input type="number" name="edad" required><br><br>
 
+    <label>Correo de contacto:</label><br><br>
+    <input type="email" name="correo" required><br><br>
+
+    <label>Escuela de procedencia:</label>
+    <select name="escuela" required>
+      <option value="">Seleccione una escuela</option>
+      <option value="CICS Unidad Milpa Alta">CICS Unidad Milpa Alta</option>
+      <option value="CICS Unidad Santo Tomás">CICS Unidad Santo Tomás</option>
+      <option value="ENBA">ENBA</option>
+      <option value="ENCB">ENCB</option>
+      <option value="ENMyH">ENMyH</option>
+      <option value="ESCA Unidad Santo Tomás">ESCA Unidad Santo Tomás</option>
+      <option value="ESCA Unidad Tepepan">ESCA Unidad Tepepan</option>
+      <option value="ESCOM">ESCOM</option>
+      <option value="ESE">ESE</option>
+      <option value="ESEO">ESEO</option>
+      <option value="ESFM">ESFM</option>
+      <option value="ESIME Unidad Culhuacán">ESIME Unidad Culhuacán</option>
+      <option value="ESIME Unidad Ticomán">ESIME Unidad Ticomán</option>
+      <option value="ESIME Unidad Azcapotzalco">ESIME Unidad Azcapotzalco</option>
+      <option value="ESIME Unidad Zacatenco">ESIME Unidad Zacatenco</option>
+      <option value="ESIQIE">ESIQIE</option>
+      <option value="ESIT">ESIT</option>
+      <option value="ESIA Unidad Tecamachalco">ESIA Unidad Tecamachalco</option>
+      <option value="ESIA Unidad Zacatenco">ESIA Unidad Zacatenco</option>
+      <option value="ESIA Unidad Ticomán">ESIA Unidad Ticomán</option>
+      <option value="ESM">ESM</option>
+      <option value="EST">EST</option>
+      <option value="UPIIBI">UPIIBI</option>
+      <option value="UPIIG Campus Guanajuato">UPIIG Campus Guanajuato</option>
+      <option value="UPIIZ Campus Zacatecas">UPIIZ Campus Zacatecas</option>
+      <option value="UPIIC Campus Coahuila">UPIIC Campus Coahuila</option>
+      <option value="UPIICSA">UPIICSA</option>
+      <option value="UPIITA">UPIITA</option>
+      <option value="UPIEM">UPIEM</option>
+    </select>
+
     <label>Vacante:</label><br>
-    <select name="vacante" id="vacante-select" required></select><br><br>
+    <select name="vacante" id="vacante-select" required>
+      <option value="">Seleccione una vacante</option>
+    </select><br><br>
 
     <label>Subir CV:</label><br>
-    <input type="file" name="cv" required><br><br>
+    <input type="file" name="cv" id="cv-file" required><br><br>
 
     <button type="submit">Enviar</button>
   </form>
+
+  <p id="mensaje"></p>
+
   <script>
-    fetch('/api/vacantes')
-      .then(res => res.json())
-      .then(data => {
-        const select = document.getElementById('vacante-select');
-        data.forEach(v => {
-          const option = document.createElement('option');
-          option.value = v._id;
-          option.textContent = v.nombre;
-          select.appendChild(option);
-        });
+    async function cargarVacantes() {
+      const res = await fetch('/api/vacantes');
+      const vacantes = await res.json();
+      const select = document.getElementById('vacante-select');
+      vacantes.forEach(v => {
+        const option = document.createElement('option');
+        option.value = v._id;
+        option.textContent = `${v.identificador} - ${v.nombre}`;
+        select.appendChild(option);
       });
+    }
+
+    window.addEventListener('DOMContentLoaded', cargarVacantes);
+
+    const form = document.getElementById('registro-form');
+
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+
+      const formData = new FormData(form);
+      const fileInput = document.getElementById('cv-file');
+      const file = fileInput.files[0];
+
+      if (!file) {
+        alert("Selecciona un archivo");
+        return;
+      }
+
+      // Validación de tipo MIME
+      if (file.type !== "application/pdf") {
+        alert("El archivo debe ser un PDF.");
+        return;
+      }
+
+      // Validación opcional por extensión (extra)
+      const ext = file.name.split('.').pop().toLowerCase();
+      if (ext !== 'pdf') {
+        alert("La extensión del archivo debe ser .pdf");
+        return;
+      }
+
+
+      const uploadRes = await fetch('/api/users/upload', {
+        method: 'POST',
+        body: formData
+      });
+
+      const uploadData = await uploadRes.json();
+      const cvNombre = uploadData.filename;
+
+      const dataFinal = {
+        nombre: formData.get('nombre'),
+        edad: parseInt(formData.get('edad')),
+        vacante: formData.get('vacante'),
+        cv: cvNombre
+      };
+
+      const saveRes = await fetch('/api/users/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dataFinal)
+      });
+
+      const result = await saveRes.json();
+      document.getElementById('mensaje').textContent = result.message || 'Registrado';
+    });
   </script>
 </body>
 </html>

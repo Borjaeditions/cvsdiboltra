@@ -50,7 +50,7 @@
 
         <div style="flex: 2; min-width: 400px; padding-left: 20px;">
           <h3>Vista previa del CV</h3>
-          <canvas id="preview-cv" style="width:100%; border:1px solid #ccc;"></canvas>
+          <iframe id="preview-cv" style="width:100%; height:500px; border:1px solid #ccc;"></iframe>
         </div>
       </div>
 
@@ -96,29 +96,10 @@
 
       // 🧠 Mostrar PDF seleccionado
       function mostrarCV(cvFilename) {
-        const canvas = document.getElementById('preview-cv');
-        const ctx = canvas.getContext('2d');
-        const url = `/api/admin/cv/${cvFilename}`;
-
-        pdfjsLib.getDocument({
-          url,
-          httpHeaders: {
-            Authorization: "Basic " + btoa("admin:1234") // o tu token
-          }
-        }).promise.then(pdf => {
-          return pdf.getPage(1);
-        }).then(page => {
-          const viewport = page.getViewport({ scale: 1.5 });
-          canvas.height = viewport.height;
-          canvas.width = viewport.width;
-
-          return page.render({ canvasContext: ctx, viewport }).promise;
-        }).catch(err => {
-          console.error("❌ Error al cargar PDF:", err);
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          alert("No se pudo mostrar el CV.");
-        });
+        const iframe = document.getElementById('preview-cv');
+        iframe.src = `/api/admin/cv/${cvFilename}`;
       }
+
 
       // 📦 Descargar ZIP
       const btnDescarga = document.getElementById('descargarZip');
@@ -128,6 +109,25 @@
           const archivos = Array.from(checks).map(c => c.dataset.cv);
 
           if (!archivos.length) return alert("Selecciona al menos un CV");
+
+          const vacanteSelect = document.getElementById('vacanteFiltro');
+          const vacanteTexto = vacanteSelect.options[vacanteSelect.selectedIndex].textContent;
+          
+          // Extraer nombre limpio: "VacanteIES1-25 - Ingeniería en Software"
+          const nombreVacante = vacanteTexto.split(' - ')[1] || '';
+          
+          // Palabras a ignorar
+          const palabrasIgnoradas = ['en', 'de', 'del', 'la', 'el', 'y'];
+          
+          // Obtener iniciales significativas
+          const iniciales = nombreVacante
+            .split(/\s+/)
+            .filter(palabra => !palabrasIgnoradas.includes(palabra.toLowerCase()))
+            .map(palabra => palabra[0])
+            .join('')
+            .toUpperCase();
+
+          const identificadorFinal = `Vacante${iniciales}1-25`; // puedes ajustar el número o año
 
           const res = await fetch('/api/admin/zip', {
             method: 'POST',
@@ -142,7 +142,7 @@
           const url = window.URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = 'cvs_seleccionados.zip';
+          a.download = `${identificadorFinal}.zip`; // 👈 nombre del ZIP final
           a.click();
         });
       }
