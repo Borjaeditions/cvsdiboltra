@@ -26,6 +26,7 @@ body {
   input[type="number"],
   input[type="file"],
   input[type="email"],
+  input[type="tel"],
   select {
     width: 100%;
     padding: 8px;
