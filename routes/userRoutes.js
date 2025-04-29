@@ -102,6 +102,7 @@ router.post('/create', upload.single('cv'), async (req, res) => {
       lada,
       telefono,
       escuela,
+      carrera,
       cv: req.file.filename,
       vacante: vacante || null
     });
